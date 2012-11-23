@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+
+import sys
+
+code_blocks = {}
+
+mapfile = sys.argv[1]
+lstfile = mapfile.replace('.map','.lst')
+
+with open(mapfile, 'r') as f:
+    in_class_code = False
+    for line in f:
+        if in_class_code:
+            if "CLASS" in line:
+                break
+            line = line.strip()
+            line = line.split()
+            if len(line) > 0:
+                code_blocks[line[0]] = [line[1],line[2],int(line[3],16)]
+        else:
+            if line.strip().startswith("CLASS   CODE"):
+                in_class_code = True
+
+with open(lstfile, 'r') as f:
+    function_name = None
+    for line in f:
+        if "*** function" in line:
+            line = line.strip().split()
+            function_name = line[4]
+        if "psect" in line and ",class=CODE" in line:
+            line = line.strip().split()
+            psect = line[2].split(',')[0]
+            if psect in code_blocks:
+                code_blocks[psect].append(function_name)
+            else:
+                print("W: psect", psect, "has no function")
+
+total = 0
+for psect,data in sorted(code_blocks.items(), key=lambda x: x[1][2]):
+    fun = "None"
+    if len(data) > 3:
+        fun = data[3]
+    print("%-6d\t%s\t%s\t%s\t%s" % (data[2], fun, psect, data[0], data[1]))
+    total += data[2]
+
+print("%-6d\ttotal" % total)
